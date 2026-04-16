@@ -1,0 +1,342 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Prof. Curious — Apple-Inspired Reductive Design System
+   Tailwind v4 CSS-first configuration
+   ============================================================ */
+
+/* ─── Design Tokens (Tailwind v4 @theme) ─── */
+@theme inline {
+  /* Color Palette */
+  --color-apple-black: #000000;
+  --color-apple-gray: #f5f5f7;
+  --color-apple-near-black: #1d1d1f;
+  --color-apple-blue: #0071e3;
+  --color-apple-blue-hover: #0077ed;
+  --color-apple-blue-active: #006edb;
+  --color-apple-text-secondary: #86868b;
+  --color-apple-text-tertiary: #6e6e73;
+  --color-apple-separator: rgba(0, 0, 0, 0.08);
+  --color-apple-separator-dark: rgba(255, 255, 255, 0.12);
+
+  /* Glass Effect Colors */
+  --color-glass-dark: rgba(29, 29, 31, 0.72);
+  --color-glass-light: rgba(245, 245, 247, 0.72);
+
+  /* Semantic Colors */
+  --color-background: #000000;
+  --color-foreground: #f5f5f7;
+  --color-surface: #f5f5f7;
+  --color-surface-dark: #000000;
+  --color-accent: #0071e3;
+
+  /* Status Colors (muted, Apple-style) */
+  --color-success: #30d158;
+  --color-warning: #ff9f0a;
+  --color-error: #ff453a;
+  --color-info: #64d2ff;
+
+  /* Font Families — SF Pro with system fallbacks */
+  --font-display: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-body: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "SF Mono", ui-monospace, SFMono-Regular, "Cascadia Code",
+    "Segoe UI Mono", monospace;
+
+  /* Border Radius */
+  --radius-pill: 980px;
+  --radius-card: 18px;
+  --radius-button: 980px;
+  --radius-input: 12px;
+  --radius-modal: 20px;
+
+  /* Spacing Scale (Apple optical spacing) */
+  --spacing-section: 120px;
+  --spacing-section-mobile: 80px;
+
+  /* Transitions */
+  --ease-apple: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 300ms;
+  --duration-slow: 500ms;
+
+  /* Z-index Scale */
+  --z-nav: 100;
+  --z-modal: 200;
+  --z-chat: 150;
+  --z-toast: 250;
+}
+
+/* ─── CSS Custom Properties (non-Tailwind) ─── */
+:root {
+  /* Apple Typography Metrics */
+  --letter-spacing-tight: -0.374px;
+  --letter-spacing-display: -0.015em;
+  --letter-spacing-headline: -0.022em;
+  --line-height-display: 1.06;
+  --line-height-headline: 1.12;
+  --line-height-body: 1.19;
+
+  /* Glass Navigation */
+  --nav-height: 48px;
+  --nav-backdrop: saturate(180%) blur(20px);
+}
+
+/* ─── Base Styles ─── */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  letter-spacing: var(--letter-spacing-tight);
+  line-height: var(--line-height-body);
+  background-color: var(--color-apple-black);
+  color: var(--color-foreground);
+  overflow-x: hidden;
+}
+
+/* ─── Typography System ─── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+h1 {
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  letter-spacing: var(--letter-spacing-display);
+  line-height: var(--line-height-display);
+  font-weight: 700;
+}
+
+h2 {
+  font-size: clamp(2rem, 4vw, 3rem);
+  letter-spacing: var(--letter-spacing-headline);
+  line-height: var(--line-height-headline);
+}
+
+h3 {
+  font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+  letter-spacing: var(--letter-spacing-headline);
+  line-height: 1.2;
+}
+
+p {
+  line-height: var(--line-height-body);
+  color: var(--color-apple-text-secondary);
+}
+
+/* ─── Glass Navigation Utility ─── */
+.glass-nav {
+  background-color: var(--color-glass-dark);
+  backdrop-filter: var(--nav-backdrop);
+  -webkit-backdrop-filter: var(--nav-backdrop);
+}
+
+.glass-light {
+  background-color: var(--color-glass-light);
+  backdrop-filter: var(--nav-backdrop);
+  -webkit-backdrop-filter: var(--nav-backdrop);
+}
+
+/* ─── Section Alternation ─── */
+.section-dark {
+  background-color: var(--color-apple-black);
+  color: var(--color-foreground);
+}
+
+.section-light {
+  background-color: var(--color-apple-gray);
+  color: var(--color-apple-near-black);
+}
+
+.section-light p {
+  color: var(--color-apple-text-tertiary);
+}
+
+/* ─── Pill CTA Button ─── */
+.btn-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.75rem;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-body);
+  font-size: 1.0625rem;
+  font-weight: 500;
+  letter-spacing: -0.022em;
+  line-height: 1.19;
+  cursor: pointer;
+  border: none;
+  transition: background-color var(--duration-fast) var(--ease-apple),
+              transform var(--duration-fast) var(--ease-apple),
+              opacity var(--duration-fast) var(--ease-apple);
+  text-decoration: none;
+}
+
+.btn-pill:active {
+  transform: scale(0.98);
+}
+
+.btn-pill-primary {
+  background-color: var(--color-apple-blue);
+  color: #ffffff;
+}
+
+.btn-pill-primary:hover {
+  background-color: var(--color-apple-blue-hover);
+}
+
+.btn-pill-secondary {
+  background-color: transparent;
+  color: var(--color-apple-blue);
+}
+
+.btn-pill-secondary:hover {
+  background-color: rgba(0, 113, 227, 0.08);
+}
+
+.btn-pill-ghost {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--color-foreground);
+}
+
+.btn-pill-ghost:hover {
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+/* ─── Disabled State (for rate-limited UI) ─── */
+.btn-pill:disabled,
+.btn-pill[aria-disabled="true"] {
+  opacity: 0.42;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ─── Focus Visible (Accessibility) ─── */
+:focus-visible {
+  outline: 3px solid var(--color-apple-blue);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ─── Scrollbar Styling ─── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+.section-light::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+/* ─── Selection Styling ─── */
+::selection {
+  background-color: rgba(0, 113, 227, 0.3);
+  color: inherit;
+}
+
+/* ─── Animations ─── */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(0, 113, 227, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(0, 113, 227, 0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in var(--duration-normal) var(--ease-apple) both;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up var(--duration-slow) var(--ease-apple) both;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Staggered animation delays */
+.stagger-1 { animation-delay: 100ms; }
+.stagger-2 { animation-delay: 200ms; }
+.stagger-3 { animation-delay: 300ms; }
+.stagger-4 { animation-delay: 400ms; }
+.stagger-5 { animation-delay: 500ms; }
+
+/* ─── Offline Banner ─── */
+.offline-banner {
+  background-color: var(--color-warning);
+  color: var(--color-apple-black);
+  text-align: center;
+  padding: 8px 16px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: -0.006em;
+}
+
+/* ─── Rate Limit Banner ─── */
+.rate-limit-banner {
+  background-color: rgba(255, 159, 10, 0.12);
+  border: 1px solid rgba(255, 159, 10, 0.24);
+  border-radius: var(--radius-card);
+  padding: 16px 20px;
+  color: var(--color-warning);
+  font-size: 0.9375rem;
+  line-height: 1.4;
+}
+
+/* ─── KaTeX Overrides ─── */
+.katex {
+  font-size: 1.05em !important;
+}
+
+.katex-display {
+  margin: 1rem 0 !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5rem 0;
+}
