@@ -71,7 +71,7 @@
 /* ─── CSS Custom Properties (non-Tailwind) ─── */
 :root {
   /* Apple Typography Metrics */
-  --letter-spacing-tight: -0.374px;
+  --letter-spacing-tight: -0.02em;
   --letter-spacing-display: -0.015em;
   --letter-spacing-headline: -0.022em;
   --line-height-display: 1.06;
@@ -99,12 +99,15 @@ html {
 }
 
 body {
-  font-family: var(--font-body);
+  font-family: var(--font-inter, var(--font-body));
   letter-spacing: var(--letter-spacing-tight);
   line-height: var(--line-height-body);
   background-color: var(--color-apple-black);
   color: var(--color-foreground);
   overflow-x: hidden;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* ─── Typography System ─── */

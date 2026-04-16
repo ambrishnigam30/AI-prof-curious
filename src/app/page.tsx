@@ -1,14 +1,35 @@
+/**
+ * Landing Page — Prof. Curious
+ *
+ * Full-viewport Pure Black hero with the Apple-inspired reductive design:
+ * - No borders, no shadows — depth via background alternation
+ * - Pill-shaped CTA in Apple Blue
+ * - Tight tracking, SF Pro–style fallback fonts via Inter
+ *
+ * @see ARCHITECTURE.md §1.3 — Design System Constraints
+ * @see ARCHITECTURE.md §1.4 — Landing Page: "Dark hero section"
+ */
+
 "use client";
 
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { ArrowRight, BookOpen, Brain, BarChart3 } from "lucide-react";
+
+// Apple-style easing
+const appleEase = [0.25, 0.1, 0.25, 1] as const;
 
 export default function Home() {
   return (
     <div className="flex flex-col">
-      {/* ─── Hero Section (Dark) ─── */}
-      <section className="section-dark relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6">
-        {/* Subtle radial gradient background */}
+      {/* ─────────────────────────────────
+          HERO SECTION (Dark — Pure Black)
+          ───────────────────────────────── */}
+      <section
+        className="section-dark relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6"
+        id="hero"
+      >
+        {/* Subtle radial gradient — Apple-style blue glow below center */}
         <div
           className="pointer-events-none absolute inset-0"
           style={{
@@ -21,7 +42,7 @@ export default function Home() {
           className="relative z-10 flex max-w-3xl flex-col items-center text-center"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1] }}
+          transition={{ duration: 0.8, ease: appleEase }}
         >
           {/* Eyebrow */}
           <motion.p
@@ -36,9 +57,9 @@ export default function Home() {
 
           {/* Headline */}
           <h1 className="mb-6 text-[clamp(2.5rem,5vw,4.5rem)] font-bold leading-[1.06] tracking-[-0.015em]">
-            Learn like your best teacher is{" "}
+            Master every concept.{" "}
             <span style={{ color: "var(--color-apple-blue)" }}>
-              always free.
+              Pass every exam.
             </span>
           </h1>
 
@@ -54,27 +75,21 @@ export default function Home() {
             className="flex flex-col gap-4 sm:flex-row"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.6 }}
+            transition={{ delay: 0.5, duration: 0.6, ease: appleEase }}
           >
-            <Link href="/login" className="btn-pill btn-pill-primary">
-              Get Started
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 14 14"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M1 7H13M13 7L7 1M13 7L7 13"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+            <Link
+              href="/login"
+              className="btn-pill btn-pill-primary"
+              id="hero-cta-primary"
+            >
+              Start Learning
+              <ArrowRight size={14} strokeWidth={1.5} />
             </Link>
-            <Link href="/features" className="btn-pill btn-pill-ghost">
+            <Link
+              href="/features"
+              className="btn-pill btn-pill-ghost"
+              id="hero-cta-secondary"
+            >
               See How It Works
             </Link>
           </motion.div>
@@ -94,25 +109,26 @@ export default function Home() {
             className="h-8 w-[1px] bg-[var(--color-apple-text-secondary)]"
             initial={{ scaleY: 0 }}
             animate={{ scaleY: 1 }}
-            transition={{
-              delay: 1.5,
-              duration: 0.8,
-              ease: [0.25, 0.1, 0.25, 1],
-            }}
+            transition={{ delay: 1.5, duration: 0.8, ease: appleEase }}
             style={{ transformOrigin: "top" }}
           />
         </motion.div>
       </section>
 
-      {/* ─── Features Section (Light) ─── */}
-      <section className="section-light px-6 py-[var(--spacing-section)]">
+      {/* ─────────────────────────────────
+          FEATURES SECTION (Light — #f5f5f7)
+          ───────────────────────────────── */}
+      <section
+        className="section-light px-6 py-[var(--spacing-section)]"
+        id="features"
+      >
         <div className="mx-auto max-w-5xl">
           <motion.div
             className="mb-20 text-center"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.7, ease: [0.25, 0.1, 0.25, 1] }}
+            transition={{ duration: 0.7, ease: appleEase }}
           >
             <h2 className="mb-4 text-[clamp(2rem,4vw,3rem)] font-semibold leading-[1.12] tracking-[-0.022em] text-[var(--color-apple-near-black)]">
               The teacher that adapts to you.
@@ -127,17 +143,17 @@ export default function Home() {
           <div className="grid gap-8 md:grid-cols-3">
             {[
               {
-                emoji: "🌐",
+                icon: <BookOpen size={28} strokeWidth={1.5} />,
                 title: "Bilingual Learning",
                 desc: "Read concepts in Hindi, toggle to English. Build fluency without losing comprehension.",
               },
               {
-                emoji: "🧠",
+                icon: <Brain size={28} strokeWidth={1.5} />,
                 title: "Socratic AI Buddy",
                 desc: "Never just gives the answer. Guides you step-by-step until the concept clicks.",
               },
               {
-                emoji: "📊",
+                icon: <BarChart3 size={28} strokeWidth={1.5} />,
                 title: "Adaptive Difficulty",
                 desc: "Gets harder when you're ready, easier when you need it. Powered by real-time analytics.",
               },
@@ -151,10 +167,15 @@ export default function Home() {
                 transition={{
                   delay: i * 0.12,
                   duration: 0.6,
-                  ease: [0.25, 0.1, 0.25, 1],
+                  ease: appleEase,
                 }}
               >
-                <span className="mb-4 block text-3xl">{feature.emoji}</span>
+                <span
+                  className="mb-4 block text-[var(--color-apple-blue)]"
+                  aria-hidden="true"
+                >
+                  {feature.icon}
+                </span>
                 <h3 className="mb-2 text-xl font-semibold text-[var(--color-apple-near-black)]">
                   {feature.title}
                 </h3>
@@ -167,13 +188,18 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── CTA Section (Dark) ─── */}
-      <section className="section-dark flex flex-col items-center px-6 py-[var(--spacing-section)] text-center">
+      {/* ─────────────────────────────────
+          BOTTOM CTA SECTION (Dark)
+          ───────────────────────────────── */}
+      <section
+        className="section-dark flex flex-col items-center px-6 py-[var(--spacing-section)] text-center"
+        id="cta"
+      >
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.7, ease: [0.25, 0.1, 0.25, 1] }}
+          transition={{ duration: 0.7, ease: appleEase }}
         >
           <h2 className="mb-4 text-[clamp(2rem,4vw,3rem)] font-semibold leading-[1.12] tracking-[-0.022em]">
             Ready to ace your exams?
@@ -182,21 +208,33 @@ export default function Home() {
             Join thousands of CBSE and ICSE students learning smarter
             with Prof. Curious.
           </p>
-          <Link href="/login" className="btn-pill btn-pill-primary text-lg">
+          <Link
+            href="/login"
+            className="btn-pill btn-pill-primary text-lg"
+            id="cta-start"
+          >
             Start Learning — It&apos;s Free
           </Link>
         </motion.div>
       </section>
 
-      {/* ─── Footer ─── */}
-      <footer className="border-t border-[var(--color-apple-separator-dark)] bg-[var(--color-apple-black)] px-6 py-8">
+      {/* ─────────────────────────────────
+          FOOTER
+          ───────────────────────────────── */}
+      <footer className="bg-[var(--color-apple-black)] px-6 py-8">
         <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 text-sm text-[var(--color-apple-text-secondary)] sm:flex-row">
           <p>© {new Date().getFullYear()} Prof. Curious. All rights reserved.</p>
           <div className="flex gap-6">
-            <Link href="/about" className="transition-colors hover:text-[var(--color-foreground)]">
+            <Link
+              href="/about"
+              className="transition-colors hover:text-[var(--color-foreground)]"
+            >
               About
             </Link>
-            <Link href="/features" className="transition-colors hover:text-[var(--color-foreground)]">
+            <Link
+              href="/features"
+              className="transition-colors hover:text-[var(--color-foreground)]"
+            >
               Features
             </Link>
           </div>
