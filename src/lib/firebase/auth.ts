@@ -4,6 +4,9 @@
  * v2: Phone OTP has been removed entirely. Google Sign-In is unlimited
  * on the Firebase Spark (free) plan — no per-auth cost.
  *
+ * Note: Firestore user sync is handled separately by `userSync.ts`
+ * and called from the `useAuth` hook after sign-in.
+ *
  * @see ARCHITECTURE.md §4.4 — src/lib/firebase/auth.ts
  */
 
@@ -13,51 +16,19 @@ import {
   onAuthStateChanged,
   User,
 } from "firebase/auth";
-import {
-  doc,
-  getDoc,
-  setDoc,
-  serverTimestamp,
-} from "firebase/firestore";
-import { auth, googleProvider, db } from "./config";
+import { auth, googleProvider } from "./config";
 
 /**
- * Sign in with Google via popup. Creates a new Firestore user doc
- * on first login; updates `lastActiveAt` for returning users.
+ * Sign in with Google via popup.
+ * Returns the authenticated Firebase User.
  */
 export async function signInWithGoogle(): Promise<User> {
-  if (!auth || !googleProvider || !db) {
+  if (!auth || !googleProvider) {
     throw new Error("Firebase not initialized. Check your .env.local configuration.");
   }
 
   const result = await signInWithPopup(auth, googleProvider);
-  const user = result.user;
-
-  // Check if user exists in Firestore
-  const userRef = doc(db, "users", user.uid);
-  const userDoc = await getDoc(userRef);
-
-  if (!userDoc.exists()) {
-    // First-time user — create base document, redirect to onboarding
-    await setDoc(userRef, {
-      displayName: user.displayName,
-      email: user.email,
-      photoURL: user.photoURL,
-      googleUid: user.uid,
-      role: "student", // Default role; admin can promote to teacher
-      createdAt: serverTimestamp(),
-      lastActiveAt: serverTimestamp(),
-      onboardingComplete: false,
-      streakCount: 0,
-      xp: 0,
-      diagnosticComplete: false,
-    });
-  } else {
-    // Returning user — update lastActiveAt
-    await setDoc(userRef, { lastActiveAt: serverTimestamp() }, { merge: true });
-  }
-
-  return user;
+  return result.user;
 }
 
 /**
