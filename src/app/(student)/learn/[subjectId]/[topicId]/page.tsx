@@ -20,7 +20,7 @@
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { MessageCircle, BookOpen, Zap } from "lucide-react";
+import { MessageCircle, BookOpen, Zap, ClipboardList } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import ChatPanel from "@/components/chat/ChatPanel";
 
@@ -366,8 +366,9 @@ export default function TopicLessonPage({
         </section>
       </div>
 
-      {/* ── Floating "Ask Prof. Curious" CTA ── */}
-      <div className="fixed bottom-6 left-0 right-0 flex justify-center px-4 z-[130]">
+      {/* ── Floating CTAs: "Ask Prof. Curious" + "Test Knowledge" ── */}
+      <div className="fixed bottom-6 left-0 right-0 flex justify-center gap-3 px-4 z-[130]">
+        {/* Primary: Ask Prof. Curious */}
         <button
           id="ask-prof-curious-btn"
           onClick={() => setIsChatOpen(true)}
@@ -385,6 +386,26 @@ export default function TopicLessonPage({
           <MessageCircle size={18} />
           {lang === "en" ? "Ask Prof. Curious" : "Prof. Curious से पूछें"}
         </button>
+
+        {/* Secondary: Test Knowledge → links to the practice quiz route */}
+        <Link
+          id="test-knowledge-btn"
+          href={`/learn/${subjectId}/${topicId}/practice`}
+          aria-label="Take a practice quiz on this topic"
+          className={`
+            flex items-center gap-2.5 rounded-full px-6 py-3.5
+            bg-white text-[#1d1d1f] text-[0.9375rem] font-medium
+            border border-gray-200
+            shadow-[0_4px_16px_rgba(0,0,0,0.08)]
+            transition-all duration-200
+            hover:bg-[#f5f5f7] hover:-translate-y-0.5
+            active:scale-[0.97]
+            ${isChatOpen ? "opacity-0 pointer-events-none" : "opacity-100"}
+          `}
+        >
+          <ClipboardList size={18} />
+          {lang === "en" ? "Test Knowledge" : "परीक्षण करें"}
+        </Link>
       </div>
 
       {/* ── Chat Panel (Phase 6: wired to Firestore persistence) ── */}
