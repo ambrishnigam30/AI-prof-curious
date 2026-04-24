@@ -11,8 +11,12 @@
  *   - User bubble: Apple Blue  #0071e3 / white text
  *   - AI bubble:   Apple Gray  #f5f5f7 / near-black text
  *
+ * Phase 6: Accepts uid/subjectId/topicId and forwards to useChat for
+ *           Firestore persistence and history hydration on open.
+ *
  * @see ARCHITECTURE.md §1.4 — Step 7: Prof. Curious Chat
  * @see src/hooks/useChat.ts
+ * @see src/lib/firebase/chatSync.ts
  */
 
 "use client";
@@ -28,6 +32,12 @@ interface ChatPanelProps {
   onClose: () => void;
   /** Optional topic context shown in the opening greeting. */
   topicName?: string;
+  /** Firebase Auth UID — required to persist chat to Firestore. */
+  uid?: string;
+  /** Subject slug, e.g. "mathematics". */
+  subjectId?: string;
+  /** Topic slug, e.g. "algebraic-identities". */
+  topicId?: string;
 }
 
 // ─── Streaming Dots (typing indicator) ───────────────────────────────────────
@@ -99,9 +109,15 @@ function MessageBubble({
 
 // ─── Main Panel ───────────────────────────────────────────────────────────────
 
-export default function ChatPanel({ onClose, topicName }: ChatPanelProps) {
-  const { messages, isLoading, isRateLimited, input, setInput, sendMessage } =
-    useChat();
+export default function ChatPanel({
+  onClose,
+  topicName,
+  uid,
+  subjectId,
+  topicId,
+}: ChatPanelProps) {
+  const { messages, isLoading, isHistoryLoading, isRateLimited, input, setInput, sendMessage } =
+    useChat({ uid, subjectId, topicId });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -193,6 +209,8 @@ export default function ChatPanel({ onClose, topicName }: ChatPanelProps) {
               <p className="text-[0.75rem] text-[#86868b]">
                 {isRateLimited
                   ? "Taking a short break..."
+                  : isHistoryLoading
+                  ? "Loading history..."
                   : isLoading
                   ? "Thinking..."
                   : "AI Socratic Tutor"}
@@ -223,8 +241,23 @@ export default function ChatPanel({ onClose, topicName }: ChatPanelProps) {
             </div>
           )}
 
-          {/* Welcome greeting (shown when no messages yet) */}
-          {messages.length === 0 && (
+          {/* History loading skeleton */}
+          {isHistoryLoading && (
+            <div className="flex flex-col gap-2 mb-4" aria-label="Loading chat history">
+              {["60%", "45%", "70%"].map((w, i) => (
+                <div
+                  key={i}
+                  className={`h-8 animate-pulse rounded-2xl bg-[#f5f5f7] ${
+                    i % 2 === 0 ? "self-end" : "self-start"
+                  }`}
+                  style={{ width: w }}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Welcome greeting (shown when no messages yet and history isn't loading) */}
+          {!isHistoryLoading && messages.length === 0 && (
             <div className="mb-3">
               <MessageBubble role="model" content={greeting} />
             </div>

@@ -1,21 +1,24 @@
 /**
  * Dashboard — Student Home Screen
  *
- * Shows personalized greeting, stats strip, and subject grid.
- * Protected: redirects to / if not authenticated.
+ * Phase 6 addition: Real-time Firestore listener on users/{uid} powers
+ * the stats strip (streak, mastered topics, XP, practice sets).
+ * Falls back to zero-state with animate-pulse skeleton while loading.
  *
  * @see ARCHITECTURE.md §1.4 — Dashboard (Step 10)
- * @see ARCHITECTURE.md §1.3 — Design System Constraints
+ * @see ARCHITECTURE.md §2.3 — users schema (streakCount, xp, totalTopicsMastered)
  */
 
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase/config";
 import { useAuth } from "@/hooks/useAuth";
 
-// ─── Subject data (Phase 1 — CBSE Class 9/10 core subjects) ───
+// ─── Subject data (Phase 1 — CBSE Class 9/10 core subjects) ───────────────────
 const subjects = [
   { id: "mathematics", name: "Mathematics", icon: "📐", color: "#0071e3" },
   { id: "science", name: "Science", icon: "🔬", color: "#30d158" },
@@ -24,19 +27,106 @@ const subjects = [
   { id: "hindi", name: "Hindi", icon: "🇮🇳", color: "#ff453a" },
 ];
 
+// ─── User stats shape (mirrors Firestore users/{uid} schema) ──────────────────
+interface UserStats {
+  streakCount: number;
+  totalTopicsMastered: number;
+  xp: number;
+  totalPracticeAttempts: number;
+}
+
+// ─── Stat Card ────────────────────────────────────────────────────────────────
+
+function StatCard({
+  label,
+  value,
+  suffix,
+  isLoading,
+  id,
+}: {
+  label: string;
+  value: number;
+  suffix?: string;
+  isLoading: boolean;
+  id: string;
+}) {
+  return (
+    <div className="rounded-2xl bg-white p-5" id={id}>
+      <p className="text-sm font-medium text-[#86868b]">{label}</p>
+      <p className="mt-1 text-3xl font-semibold tracking-tight text-[#1d1d1f]">
+        {isLoading ? (
+          // Pulse skeleton while Firestore data is loading
+          <span className="inline-block h-9 w-10 animate-pulse rounded-lg bg-[#f5f5f7]" />
+        ) : (
+          <>
+            {value.toLocaleString()}
+            {suffix && (
+              <span className="ml-1 text-lg text-[#86868b]">{suffix}</span>
+            )}
+          </>
+        )}
+      </p>
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function DashboardPage() {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
-  // ─── Auth guard: redirect to landing if not authenticated ───
+  // Real-time stats from Firestore
+  const [stats, setStats] = useState<UserStats>({
+    streakCount: 0,
+    totalTopicsMastered: 0,
+    xp: 0,
+    totalPracticeAttempts: 0,
+  });
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  // ── Auth guard ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!loading && !user) {
+    if (!authLoading && !user) {
       router.replace("/");
     }
-  }, [user, loading, router]);
+  }, [user, authLoading, router]);
 
-  // ─── Loading state ───
-  if (loading) {
+  // ── Real-time Firestore listener on users/{uid} ─────────────────────────────
+  useEffect(() => {
+    // Don't subscribe until auth is resolved and user is known
+    if (authLoading || !user || !db) return;
+
+    const userDocRef = doc(db, "users", user.uid);
+
+    const unsubscribe = onSnapshot(
+      userDocRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          setStats({
+            streakCount: data.streakCount ?? 0,
+            totalTopicsMastered: data.totalTopicsMastered ?? 0,
+            xp: data.xp ?? 0,
+            totalPracticeAttempts: data.totalPracticeAttempts ?? 0,
+          });
+        }
+        // Either way, we've received a response — stop showing skeletons
+        setStatsLoading(false);
+      },
+      (err) => {
+        // Non-fatal: user may not have a Firestore doc yet (onboarding incomplete)
+        console.error("[Dashboard] Firestore onSnapshot error:", err);
+        setStatsLoading(false);
+      }
+    );
+
+    // Clean up listener when component unmounts or user changes
+    return () => unsubscribe();
+  }, [user, authLoading]);
+
+  // ── Auth loading spinner ────────────────────────────────────────────────────
+  if (authLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-[#86868b]/30 border-t-[#0071e3]" />
@@ -44,10 +134,7 @@ export default function DashboardPage() {
     );
   }
 
-  // ─── Not authenticated (brief flash before redirect) ───
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
   const firstName = user.displayName?.split(" ")[0] ?? "Student";
 
@@ -63,33 +150,36 @@ export default function DashboardPage() {
         </p>
       </section>
 
-      {/* ─── Stats Strip ─── */}
-      <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <div className="rounded-2xl bg-white p-5">
-          <p className="text-sm font-medium text-[#86868b]">Current Streak</p>
-          <p className="mt-1 text-3xl font-semibold tracking-tight text-[#1d1d1f]">
-            0
-            <span className="ml-1 text-lg text-[#86868b]">days</span>
-          </p>
-        </div>
-        <div className="rounded-2xl bg-white p-5">
-          <p className="text-sm font-medium text-[#86868b]">Mastered Topics</p>
-          <p className="mt-1 text-3xl font-semibold tracking-tight text-[#1d1d1f]">
-            0
-          </p>
-        </div>
-        <div className="rounded-2xl bg-white p-5">
-          <p className="text-sm font-medium text-[#86868b]">Total XP</p>
-          <p className="mt-1 text-3xl font-semibold tracking-tight text-[#1d1d1f]">
-            0
-          </p>
-        </div>
-        <div className="rounded-2xl bg-white p-5">
-          <p className="text-sm font-medium text-[#86868b]">Practice Sets</p>
-          <p className="mt-1 text-3xl font-semibold tracking-tight text-[#1d1d1f]">
-            0
-          </p>
-        </div>
+      {/* ─── Stats Strip — real-time from Firestore ─── */}
+      <section
+        className="grid grid-cols-2 gap-4 sm:grid-cols-4"
+        aria-label="Your learning stats"
+      >
+        <StatCard
+          id="stat-streak"
+          label="Current Streak"
+          value={stats.streakCount}
+          suffix="days"
+          isLoading={statsLoading}
+        />
+        <StatCard
+          id="stat-mastered"
+          label="Mastered Topics"
+          value={stats.totalTopicsMastered}
+          isLoading={statsLoading}
+        />
+        <StatCard
+          id="stat-xp"
+          label="Total XP"
+          value={stats.xp}
+          isLoading={statsLoading}
+        />
+        <StatCard
+          id="stat-practice"
+          label="Practice Sets"
+          value={stats.totalPracticeAttempts}
+          isLoading={statsLoading}
+        />
       </section>
 
       {/* ─── Subject Grid ─── */}
@@ -101,7 +191,7 @@ export default function DashboardPage() {
           {subjects.map((subject) => (
             <Link
               key={subject.id}
-              href={`/learn/${subject.id}`}
+              href={`/learn/${subject.id}/algebraic-identities`}
               className="group rounded-2xl bg-white p-6 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)]"
               id={`subject-card-${subject.id}`}
             >

@@ -1,22 +1,26 @@
 /**
  * useChat — Custom React hook for the Prof. Curious streaming chat.
  *
- * Manages message state, loading state, and the input value.
- * sendMessage() optimistically appends the user bubble, then streams
- * the AI response chunk-by-chunk from /api/chat (SSE format).
+ * Phase 6 additions:
+ *   - Accepts `uid`, `subjectId`, `topicId` to scope persistence.
+ *   - On mount, calls getChatHistory() to hydrate state with past messages.
+ *   - On each send, persists the user message immediately, then persists
+ *     the completed AI response once the stream finishes.
  *
- * SSE format expected from server: "data: <json>\n\n"
- *   - { text: string }   — partial token
- *   - { error: string }  — stream-level error
- *   - "[DONE]"           — end sentinel
+ * SSE format expected from /api/chat: "data: <json>\n\n"
+ *   { text: string }   — partial token
+ *   { error: string }  — stream-level error
+ *   "[DONE]"           — end sentinel
  *
  * @see ARCHITECTURE.md §4.1 — hooks/useChat.ts
+ * @see src/lib/firebase/chatSync.ts
  * @see src/app/api/chat/route.ts
  */
 
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { saveMessage, getChatHistory } from "@/lib/firebase/chatSync";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -25,9 +29,19 @@ export interface ChatMessage {
   content: string;
 }
 
+interface UseChatOptions {
+  /** Firebase Auth UID — required for Firestore persistence. Pass null/undefined to run in memory-only mode. */
+  uid?: string | null;
+  /** Subject slug, e.g. "mathematics". Required together with topicId for persistence. */
+  subjectId?: string;
+  /** Topic slug, e.g. "algebraic-identities". */
+  topicId?: string;
+}
+
 interface UseChatReturn {
   messages: ChatMessage[];
   isLoading: boolean;
+  isHistoryLoading: boolean;
   isRateLimited: boolean;
   input: string;
   setInput: (value: string) => void;
@@ -37,14 +51,48 @@ interface UseChatReturn {
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
-export function useChat(): UseChatReturn {
+export function useChat(options: UseChatOptions = {}): UseChatReturn {
+  const { uid, subjectId, topicId } = options;
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [isRateLimited, setIsRateLimited] = useState(false);
   const [input, setInput] = useState("");
 
-  // Track the streaming abort controller so we can cancel mid-stream
+  // Track whether persistence is active (all three keys must be present)
+  const canPersist = !!(uid && subjectId && topicId);
+
+  // Streaming abort controller ref — lets us cancel mid-stream cleanly
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // ── Load history on mount (or when the topic changes) ──────────────────────
+  useEffect(() => {
+    if (!canPersist) return;
+
+    let cancelled = false;
+
+    async function loadHistory() {
+      setIsHistoryLoading(true);
+      try {
+        const history = await getChatHistory(uid!, subjectId!, topicId!);
+        if (!cancelled) {
+          setMessages(history);
+        }
+      } finally {
+        if (!cancelled) setIsHistoryLoading(false);
+      }
+    }
+
+    loadHistory();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uid, subjectId, topicId]);
+
+  // ── sendMessage ─────────────────────────────────────────────────────────────
 
   const sendMessage = useCallback(
     async (text: string) => {
@@ -59,12 +107,18 @@ export function useChat(): UseChatReturn {
       setIsLoading(true);
       setIsRateLimited(false);
 
-      // ── 2. Add an empty AI placeholder bubble that we'll fill in ──────────
+      // ── 2. Persist user message immediately (fire-and-forget) ─────────────
+      if (canPersist) {
+        saveMessage(uid!, subjectId!, topicId!, userMessage);
+      }
+
+      // ── 3. Add an empty AI placeholder bubble that we'll fill in ──────────
       const aiPlaceholder: ChatMessage = { role: "model", content: "" };
       setMessages([...updatedMessages, aiPlaceholder]);
 
-      // ── 3. Stream from the API ─────────────────────────────────────────────
+      // ── 4. Stream from the API ─────────────────────────────────────────────
       abortControllerRef.current = new AbortController();
+      let finalAiContent = "";
 
       try {
         const res = await fetch("/api/chat", {
@@ -74,16 +128,17 @@ export function useChat(): UseChatReturn {
           signal: abortControllerRef.current.signal,
         });
 
-        // Handle non-streaming error responses (401, 429, 500, etc.)
+        // Handle non-streaming error responses (429, 500, etc.)
         if (!res.ok) {
           if (res.status === 429) {
             setIsRateLimited(true);
+            const rateLimitMsg =
+              "😴 Prof. Curious is taking a short break — try again in a few minutes, or review your flashcards!";
             setMessages((prev) => {
               const updated = [...prev];
               updated[updated.length - 1] = {
                 role: "model",
-                content:
-                  "😴 Prof. Curious is taking a short break — try again in a few minutes, or review your flashcards!",
+                content: rateLimitMsg,
               };
               return updated;
             });
@@ -94,7 +149,7 @@ export function useChat(): UseChatReturn {
 
         if (!res.body) throw new Error("Response body is null");
 
-        // ── 4. Read the SSE stream chunk by chunk ──────────────────────────
+        // ── 5. Read the SSE stream chunk by chunk ──────────────────────────
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
@@ -107,12 +162,12 @@ export function useChat(): UseChatReturn {
 
           // SSE lines are delimited by "\n\n"
           const lines = buffer.split("\n\n");
-          // Keep the incomplete last segment in the buffer
           buffer = lines.pop() ?? "";
 
           for (const line of lines) {
-            // Each SSE message starts with "data: "
-            const dataLine = line.startsWith("data: ") ? line.slice(6) : line;
+            const dataLine = line.startsWith("data: ")
+              ? line.slice(6)
+              : line;
             if (!dataLine || dataLine === "[DONE]") continue;
 
             try {
@@ -123,12 +178,13 @@ export function useChat(): UseChatReturn {
               if ("error" in parsed) {
                 if (parsed.error === "rate_limited") {
                   setIsRateLimited(true);
+                  const rateLimitMsg =
+                    "😴 Prof. Curious is resting — try again in a few minutes!";
                   setMessages((prev) => {
                     const updated = [...prev];
                     updated[updated.length - 1] = {
                       role: "model",
-                      content:
-                        "😴 Prof. Curious is resting — try again in a few minutes!",
+                      content: rateLimitMsg,
                     };
                     return updated;
                   });
@@ -137,7 +193,8 @@ export function useChat(): UseChatReturn {
               }
 
               if ("text" in parsed && parsed.text) {
-                // ── 5. Append tokens to the last (AI) bubble ────────────────
+                // ── 6. Append tokens to the last (AI) bubble ────────────────
+                finalAiContent += parsed.text;
                 setMessages((prev) => {
                   const updated = [...prev];
                   const last = updated[updated.length - 1];
@@ -154,10 +211,9 @@ export function useChat(): UseChatReturn {
           }
         }
       } catch (err) {
-        if ((err as Error).name === "AbortError") return; // User cancelled
+        if ((err as Error).name === "AbortError") return;
 
         console.error("[useChat] Stream error:", err);
-        // Replace the empty AI bubble with a friendly error
         setMessages((prev) => {
           const updated = [...prev];
           updated[updated.length - 1] = {
@@ -170,9 +226,18 @@ export function useChat(): UseChatReturn {
       } finally {
         setIsLoading(false);
         abortControllerRef.current = null;
+
+        // ── 7. Persist the completed AI response (fire-and-forget) ───────────
+        // Only save if the stream produced actual content (not an error bubble)
+        if (canPersist && finalAiContent) {
+          saveMessage(uid!, subjectId!, topicId!, {
+            role: "model",
+            content: finalAiContent,
+          });
+        }
       }
     },
-    [messages, isLoading]
+    [messages, isLoading, canPersist, uid, subjectId, topicId]
   );
 
   const clearMessages = useCallback(() => {
@@ -186,6 +251,7 @@ export function useChat(): UseChatReturn {
   return {
     messages,
     isLoading,
+    isHistoryLoading,
     isRateLimited,
     input,
     setInput,

@@ -8,7 +8,8 @@
  *   - "Ask Prof. Curious" CTA that opens the ChatPanel slide-over
  *   - Auth guard — redirects unauthenticated users to landing
  *
- * Phase 5 addition: isChatOpen state + ChatPanel mounting.
+ * Phase 5: isChatOpen state + ChatPanel mounting.
+ * Phase 6: Pass uid/subjectId/topicId to ChatPanel for Firestore persistence.
  *
  * @see ARCHITECTURE.md §1.4 — Steps 6 & 7: Concept Lesson + Chat
  * @see ARCHITECTURE.md §2.3 — curriculum_topics schema
@@ -19,7 +20,7 @@
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, MessageCircle, BookOpen, Zap } from "lucide-react";
+import { MessageCircle, BookOpen, Zap } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import ChatPanel from "@/components/chat/ChatPanel";
 
@@ -386,11 +387,14 @@ export default function TopicLessonPage({
         </button>
       </div>
 
-      {/* ── Chat Panel (Phase 5) ── */}
+      {/* ── Chat Panel (Phase 6: wired to Firestore persistence) ── */}
       {isChatOpen && (
         <ChatPanel
           onClose={() => setIsChatOpen(false)}
           topicName={t(topic.name)}
+          uid={user.uid}
+          subjectId={subjectId}
+          topicId={topicId}
         />
       )}
     </div>
